@@ -1,3 +1,9 @@
+## [3.23.1](https://github.com/breaking-brake/cc-wf-studio/compare/v3.23.0...v3.23.1) (2026-02-19)
+
+### Bug Fixes
+
+* remove basic schema variant and unify to full schema ([#592](https://github.com/breaking-brake/cc-wf-studio/issues/592)) ([694817f](https://github.com/breaking-brake/cc-wf-studio/commit/694817f5b43d5aa4fff9af3f06c9c104b7b06365))
+
 ## [3.23.0](https://github.com/breaking-brake/cc-wf-studio/compare/v3.22.2...v3.23.0) (2026-02-19)
 
 ### Features
