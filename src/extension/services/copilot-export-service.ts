@@ -3,8 +3,6 @@
  *
  * Handles workflow export to GitHub Copilot Prompts format (.github/prompts/*.prompt.md)
  * Based on: /docs/Copilot-Prompts-Guide.md
- *
- * @beta This is a PoC feature for GitHub Copilot integration
  */
 
 import * as path from 'node:path';
@@ -383,6 +381,7 @@ function generateCopilotPromptFile(workflow: Workflow, options: CopilotExportOpt
   const executionInstructions = generateExecutionInstructions(workflow, {
     parentWorkflowName: workflowBaseName,
     subAgentFlows: workflow.subAgentFlows,
+    provider: 'copilot',
   });
 
   return `${frontmatter}${mermaidFlowchart}\n\n${executionInstructions}`;

@@ -7,8 +7,6 @@
  * Note: Gemini CLI uses JSON format for configuration:
  * - Config path: ~/.gemini/settings.json
  * - MCP servers section: mcpServers key
- *
- * @beta This is a PoC feature for Google Gemini CLI integration
  */
 
 import * as fs from 'node:fs/promises';
@@ -21,6 +19,7 @@ import { getMcpServerConfig } from './mcp-config-reader';
  */
 interface GeminiConfig {
   mcpServers?: Record<string, GeminiMcpServerEntry>;
+  experimental?: { enableAgents?: boolean; [key: string]: unknown };
   [key: string]: unknown;
 }
 
@@ -204,4 +203,31 @@ export async function syncMcpConfigForGeminiCli(
   }
 
   return syncedServers;
+}
+
+/**
+ * Check if enableAgents is enabled in Gemini CLI settings
+ *
+ * @returns true if experimental.enableAgents is true in ~/.gemini/settings.json
+ */
+export async function checkGeminiAgentsEnabled(): Promise<boolean> {
+  const config = await readGeminiConfig();
+  return config.experimental?.enableAgents === true;
+}
+
+/**
+ * Enable agents feature in Gemini CLI settings
+ *
+ * Reads existing config, sets experimental.enableAgents = true, and writes back.
+ * Creates ~/.gemini/ directory if it doesn't exist.
+ */
+export async function enableGeminiAgents(): Promise<void> {
+  const config = await readGeminiConfig();
+
+  if (!config.experimental) {
+    config.experimental = {};
+  }
+  config.experimental.enableAgents = true;
+
+  await writeGeminiConfig(config);
 }

@@ -3,8 +3,6 @@
  *
  * Handles workflow export to OpenAI Codex CLI Skills format (.codex/skills/name/SKILL.md)
  * Skills format enables Codex CLI to execute workflows using $skill-name format.
- *
- * @beta This is a PoC feature for OpenAI Codex CLI integration
  */
 
 import * as path from 'node:path';
@@ -53,7 +51,9 @@ description: ${description}
   });
 
   // Generate execution instructions
-  const instructions = generateExecutionInstructions(workflow);
+  const instructions = generateExecutionInstructions(workflow, {
+    provider: 'codex',
+  });
 
   // Compose SKILL.md body
   // Note: mermaidContent already includes ```mermaid and ``` wrapper

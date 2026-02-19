@@ -7,8 +7,6 @@
  * Note: Codex CLI uses TOML format for configuration:
  * - Config path: $HOME/.codex/config.toml
  * - MCP servers section: [mcp_servers.{server_name}]
- *
- * @beta This is a PoC feature for OpenAI Codex CLI integration
  */
 
 import * as fs from 'node:fs/promises';
@@ -22,6 +20,7 @@ import { getMcpServerConfig } from './mcp-config-reader';
  */
 interface CodexConfig {
   mcp_servers?: Record<string, CodexMcpServerEntry>;
+  features?: { multi_agent?: boolean; [key: string]: unknown };
   [key: string]: unknown;
 }
 
@@ -203,4 +202,31 @@ export async function syncMcpConfigForCodexCli(
   }
 
   return syncedServers;
+}
+
+/**
+ * Check if multi_agent feature is enabled in Codex CLI config
+ *
+ * @returns true if features.multi_agent is true in ~/.codex/config.toml
+ */
+export async function checkCodexMultiAgentEnabled(): Promise<boolean> {
+  const config = await readCodexConfig();
+  return config.features?.multi_agent === true;
+}
+
+/**
+ * Enable multi_agent feature in Codex CLI config
+ *
+ * Reads existing config, sets features.multi_agent = true, and writes back.
+ * Creates ~/.codex/ directory if it doesn't exist.
+ */
+export async function enableCodexMultiAgent(): Promise<void> {
+  const config = await readCodexConfig();
+
+  if (!config.features) {
+    config.features = {};
+  }
+  config.features.multi_agent = true;
+
+  await writeCodexConfig(config);
 }

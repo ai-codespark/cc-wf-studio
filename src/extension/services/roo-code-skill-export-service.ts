@@ -3,8 +3,6 @@
  *
  * Handles workflow export to Roo Code Skills format (.roo/skills/name/SKILL.md)
  * Skills format enables Roo Code to execute workflows using :skill command.
- *
- * @beta This is a PoC feature for Roo Code integration
  */
 
 import * as path from 'node:path';
@@ -52,7 +50,9 @@ description: ${description}
   });
 
   // Generate execution instructions
-  const instructions = generateExecutionInstructions(workflow);
+  const instructions = generateExecutionInstructions(workflow, {
+    provider: 'roo-code',
+  });
 
   // Compose SKILL.md body
   const body = `# ${workflow.name}

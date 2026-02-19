@@ -2,8 +2,6 @@
  * Claude Code Workflow Studio - Gemini Skill Export Service
  *
  * Handles workflow export to Google Gemini CLI Skills format (.gemini/skills/name/SKILL.md)
- *
- * @beta This is a PoC feature for Google Gemini CLI integration
  */
 
 import * as path from 'node:path';
@@ -52,7 +50,9 @@ description: ${description}
   });
 
   // Generate execution instructions
-  const instructions = generateExecutionInstructions(workflow);
+  const instructions = generateExecutionInstructions(workflow, {
+    provider: 'gemini',
+  });
 
   // Compose SKILL.md body
   const body = `# ${workflow.name}

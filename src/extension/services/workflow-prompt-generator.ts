@@ -15,6 +15,7 @@ import type {
   McpNode,
   PromptNode,
   SkillNode,
+  SubAgentNode,
   SwitchNode,
   Workflow,
   WorkflowNode,
@@ -75,7 +76,7 @@ export function generateMermaidFlowchart(source: MermaidSource): string {
       lines.push(`    ${nodeId}([End])`);
     } else if (nodeType === 'subAgent') {
       const agentName = node.name || 'Sub-Agent';
-      lines.push(`    ${nodeId}[${escapeLabel(agentName)}]`);
+      lines.push(`    ${nodeId}[${escapeLabel(`Sub-Agent: ${agentName}`)}]`);
     } else if (nodeType === 'askUserQuestion') {
       const askNode = node as AskUserQuestionNode;
       const questionText = askNode.data.questionText || 'Question';
@@ -237,7 +238,7 @@ function formatManualParameterConfigMode(node: McpNode): string[] {
 /**
  * Format MCP node in AI Parameter Config Mode
  */
-function formatAiParameterConfigMode(node: McpNode): string[] {
+function formatAiParameterConfigMode(node: McpNode, provider: ExportProvider): string[] {
   const sections: string[] = [];
   const nodeId = sanitizeNodeId(node.id);
 
@@ -317,8 +318,9 @@ function formatAiParameterConfigMode(node: McpNode): string[] {
 
   sections.push('**Execution Method**:');
   sections.push('');
+  const agentName = getAgentName(provider);
   sections.push(
-    'Claude Code should interpret the natural language description above and set appropriate parameter values based on the parameter schema. Use your best judgment to map the user intent to concrete parameter values that satisfy the constraints.'
+    `${agentName} should interpret the natural language description above and set appropriate parameter values based on the parameter schema. Use your best judgment to map the user intent to concrete parameter values that satisfy the constraints.`
   );
   sections.push('');
 
@@ -328,7 +330,7 @@ function formatAiParameterConfigMode(node: McpNode): string[] {
 /**
  * Format MCP node in AI Tool Selection Mode
  */
-function formatAiToolSelectionMode(node: McpNode): string[] {
+function formatAiToolSelectionMode(node: McpNode, provider: ExportProvider): string[] {
   const sections: string[] = [];
   const nodeId = sanitizeNodeId(node.id);
 
@@ -383,12 +385,121 @@ function formatAiToolSelectionMode(node: McpNode): string[] {
 
   sections.push('**Execution Method**:');
   sections.push('');
+  const agentName = getAgentName(provider);
   sections.push(
-    'Claude Code should analyze the task description above and select the most appropriate tool from the available tools list. Then, determine the appropriate parameter values for the selected tool based on the task requirements. If the available tools list is empty, query the MCP server at runtime to get the current list of tools.'
+    `${agentName} should analyze the task description above and select the most appropriate tool from the available tools list. Then, determine the appropriate parameter values for the selected tool based on the task requirements. If the available tools list is empty, query the MCP server at runtime to get the current list of tools.`
   );
   sections.push('');
 
   return sections;
+}
+
+/**
+ * Provider type for export-specific instruction generation.
+ * Determines provider-appropriate tool names and descriptions.
+ */
+export type ExportProvider =
+  | 'claude-code'
+  | 'copilot'
+  | 'copilot-cli'
+  | 'codex'
+  | 'gemini'
+  | 'roo-code';
+
+/**
+ * Get the provider-specific sub-agent execution description for rectangle nodes.
+ */
+function getSubAgentDescription(provider: ExportProvider): string {
+  switch (provider) {
+    case 'claude-code':
+      return '- **Rectangle nodes (Sub-Agent: ...)**: Execute Sub-Agents';
+    case 'copilot':
+      return '- **Rectangle nodes (Sub-Agent: ...)**: Execute Sub-Agents using the #runSubagent tool';
+    case 'copilot-cli':
+      return '- **Rectangle nodes (Sub-Agent: ...)**: Execute Sub-Agents using the task/agent tool';
+    case 'codex':
+      return '- **Rectangle nodes (Sub-Agent: ...)**: Execute Sub-Agents using the spawn_agent tool';
+    case 'gemini':
+      return '- **Rectangle nodes (Sub-Agent: ...)**: Execute Sub-Agents';
+    case 'roo-code':
+      return '- **Rectangle nodes (Sub-Agent: ...)**: Execute Sub-Agents';
+    default: {
+      const _exhaustiveCheck: never = provider;
+      throw new Error(`Unknown provider: ${_exhaustiveCheck}`);
+    }
+  }
+}
+
+/**
+ * Get the provider-specific AskUserQuestion description for diamond nodes.
+ */
+function getAskUserQuestionDescription(provider: ExportProvider): string {
+  switch (provider) {
+    case 'claude-code':
+      return '- **Diamond nodes (AskUserQuestion:...)**: Use the AskUserQuestion tool to prompt the user and branch based on their response';
+    case 'copilot':
+      return '- **Diamond nodes (AskUserQuestion:...)**: Use the Ask tool to prompt the user and branch based on their response';
+    case 'copilot-cli':
+      return '- **Diamond nodes (AskUserQuestion:...)**: Prompt the user with a question and branch based on their response';
+    case 'codex':
+      return '- **Diamond nodes (AskUserQuestion:...)**: Use the ask_user_question tool to prompt the user and branch based on their response';
+    case 'gemini':
+      return '- **Diamond nodes (AskUserQuestion:...)**: Use the ask_user tool to prompt the user and branch based on their response';
+    case 'roo-code':
+      return '- **Diamond nodes (AskUserQuestion:...)**: Use the ask_followup_question tool to prompt the user and branch based on their response';
+    default: {
+      const _exhaustiveCheck: never = provider;
+      throw new Error(`Unknown provider: ${_exhaustiveCheck}`);
+    }
+  }
+}
+
+/**
+ * Get the provider-specific agent name for MCP execution method descriptions.
+ */
+function getAgentName(provider: ExportProvider): string {
+  switch (provider) {
+    case 'claude-code':
+      return 'Claude Code';
+    case 'copilot':
+      return 'Copilot';
+    case 'copilot-cli':
+      return 'Copilot CLI';
+    case 'codex':
+      return 'Codex CLI';
+    case 'gemini':
+      return 'Gemini CLI';
+    case 'roo-code':
+      return 'Roo Code';
+    default: {
+      const _exhaustiveCheck: never = provider;
+      throw new Error(`Unknown provider: ${_exhaustiveCheck}`);
+    }
+  }
+}
+
+/**
+ * Get the provider-specific shell execution tool name for Codex node instructions.
+ */
+function getShellToolDescription(provider: ExportProvider): string {
+  switch (provider) {
+    case 'claude-code':
+      return 'Use the Bash tool to run';
+    case 'copilot':
+      return 'Use the #runInTerminal tool to run';
+    case 'copilot-cli':
+      return 'Run';
+    case 'codex':
+      return 'Use the shell tool to run';
+    case 'gemini':
+      return 'Use the run_shell_command tool to run';
+    case 'roo-code':
+      return 'Use the execute_command tool to run';
+    default: {
+      const _exhaustiveCheck: never = provider;
+      throw new Error(`Unknown provider: ${_exhaustiveCheck}`);
+    }
+  }
 }
 
 /**
@@ -399,6 +510,8 @@ export interface ExecutionInstructionsOptions {
   parentWorkflowName?: string;
   /** SubAgentFlows from the parent workflow */
   subAgentFlows?: Workflow['subAgentFlows'];
+  /** Provider type for generating provider-specific descriptions */
+  provider: ExportProvider;
 }
 
 /**
@@ -406,9 +519,10 @@ export interface ExecutionInstructionsOptions {
  */
 export function generateExecutionInstructions(
   workflow: Workflow,
-  options: ExecutionInstructionsOptions = {}
+  options: ExecutionInstructionsOptions
 ): string {
   const { nodes } = workflow;
+  const { provider } = options;
   const sections: string[] = [];
 
   // Introduction
@@ -422,10 +536,8 @@ export function generateExecutionInstructions(
   // Node type explanations
   sections.push('### Execution Methods by Node Type');
   sections.push('');
-  sections.push('- **Rectangle nodes**: Execute Sub-Agents using the Task tool');
-  sections.push(
-    '- **Diamond nodes (AskUserQuestion:...)**: Use the AskUserQuestion tool to prompt the user and branch based on their response'
-  );
+  sections.push(getSubAgentDescription(provider));
+  sections.push(getAskUserQuestionDescription(provider));
   sections.push(
     '- **Diamond nodes (Branch/Switch:...)**: Automatically branch based on the results of previous processing (see details section)'
   );
@@ -435,6 +547,7 @@ export function generateExecutionInstructions(
   sections.push('');
 
   // Collect nodes by type
+  const subAgentNodes = nodes.filter((n) => n.type === 'subAgent') as SubAgentNode[];
   const promptNodes = nodes.filter((n) => n.type === 'prompt') as PromptNode[];
   const skillNodes = nodes.filter((n) => n.type === 'skill') as SkillNode[];
   const mcpNodes = nodes.filter((n) => n.type === 'mcp') as McpNode[];
@@ -446,6 +559,36 @@ export function generateExecutionInstructions(
   const ifElseNodes = nodes.filter((n) => n.type === 'ifElse') as IfElseNode[];
   const switchNodes = nodes.filter((n) => n.type === 'switch') as SwitchNode[];
   const subAgentFlowNodes = nodes.filter((n) => n.type === 'subAgentFlow');
+
+  // Sub-Agent node details
+  if (subAgentNodes.length > 0) {
+    sections.push('## Sub-Agent Node Details');
+    sections.push('');
+    for (const node of subAgentNodes) {
+      const nodeId = sanitizeNodeId(node.id);
+      const agentName = node.name || 'Sub-Agent';
+      sections.push(`#### ${nodeId}(Sub-Agent: ${agentName})`);
+      sections.push('');
+      if (node.data.description) {
+        sections.push(`**Description**: ${node.data.description}`);
+        sections.push('');
+      }
+      if (node.data.model && node.data.model !== 'inherit') {
+        sections.push(`**Model**: ${node.data.model}`);
+        sections.push('');
+      }
+      if (node.data.tools) {
+        sections.push(`**Tools**: ${node.data.tools}`);
+        sections.push('');
+      }
+      sections.push('**Prompt**:');
+      sections.push('');
+      sections.push('```');
+      sections.push(node.data.prompt || '');
+      sections.push('```');
+      sections.push('');
+    }
+  }
 
   // Skill node details
   if (skillNodes.length > 0) {
@@ -482,10 +625,10 @@ export function generateExecutionInstructions(
           nodeSections = formatManualParameterConfigMode(node);
           break;
         case 'aiParameterConfig':
-          nodeSections = formatAiParameterConfigMode(node);
+          nodeSections = formatAiParameterConfigMode(node, provider);
           break;
         case 'aiToolSelection':
-          nodeSections = formatAiToolSelectionMode(node);
+          nodeSections = formatAiToolSelectionMode(node, provider);
           break;
         default:
           nodeSections = formatManualParameterConfigMode(node);
@@ -500,7 +643,7 @@ export function generateExecutionInstructions(
     sections.push('## Codex Agent Nodes');
     sections.push('');
     sections.push(
-      'Execute these nodes using the OpenAI Codex CLI. Use the Bash tool to run the `codex exec` command with the specified parameters.'
+      `Execute these nodes using the OpenAI Codex CLI. ${getShellToolDescription(provider)} the \`codex exec\` command with the specified parameters.`
     );
     sections.push('');
     for (const node of codexNodes) {
